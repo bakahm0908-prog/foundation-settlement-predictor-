@@ -71,11 +71,12 @@ def navigate(page):
 page = st.session_state.page
 with st.sidebar:
     st.markdown('<div class="brand"><div class="brand-mark">GS</div><div><div class="brand-name">GeoSettle AI</div><div class="brand-sub">GEOTECHNICAL INTELLIGENCE</div></div></div>', unsafe_allow_html=True)
-    st.caption("ENGINEERING TOOLS | VERSION 3.1")
+    st.caption("ENGINEERING TOOLS | VERSION 3.2")
     for item in pages:
         st.button(item, key="nav_"+item, type="primary" if item==page else "secondary", use_container_width=True, on_click=navigate, args=(item,))
     st.divider()
     st.caption("Developed by Bakr, Ghasaq & Hajar")
+    st.caption("Supervised by Assistant Lecturer Soura Saeed")
     st.caption("Al-Maarif University | Civil Engineering")
 
 st.caption("GEOSETTLE AI / " + page.upper())
@@ -704,6 +705,10 @@ elif page == 'Research Team':
 
     st.divider()
 
+    st.subheader("Academic Supervisor")
+    st.markdown("**Assistant Lecturer Soura Saeed**")
+    st.divider()
+
     st.subheader("Academic Affiliation")
 
     st.write("Al-Maarif University")
@@ -751,4 +756,4 @@ elif page == "Knowledge Centre":
     st.caption("Introductory educational explanations, not design guidance. Research dataset reference: Shahin (2003), University of Adelaide, Table 5.14.")
 
 st.divider()
-st.markdown('<div class="footer"><strong>GeoSettle AI</strong><br>Developed by Bakr, Ghasaq &amp; Hajar<br>Department of Civil Engineering | Al-Maarif University<br>Academic Research Project | 2026<br>Research prototype - not for professional design decisions.</div>',unsafe_allow_html=True)
+st.markdown('<div class="footer"><strong>GeoSettle AI</strong><br>Developed by Bakr, Ghasaq &amp; Hajar<br>Supervised by Assistant Lecturer Soura Saeed<br>Department of Civil Engineering | Al-Maarif University<br>Academic Research Project | 2026<br>Research prototype - not for professional design decisions.</div>',unsafe_allow_html=True)
