@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,8 +10,8 @@ from pathlib import Path
 from matplotlib.patches import Rectangle
 
 st.set_page_config(
-    page_title="Foundation Settlement Predictor",
-    page_icon="🏗️",
+    page_title="GeoSettle AI | Foundation Research",
+    page_icon="ًںڈ—ï¸ڈ",
     layout="wide"
 )
 
@@ -41,116 +40,96 @@ except Exception as e:
     st.error(f"Model loading failed: {e}")
     st.stop()
 
-# Website heading
-st.title("GeoSettle AI")
 
-st.caption(
-    "Intelligent Foundation Settlement Prediction"
-)
+import plotly.graph_objects as go
 
-st.markdown(
-    "**Research & Development Team:** "
-    "Bakr | Ghasaq | Hajar"
-)
+st.markdown("""<style>
+:root {--navy:#0c1d32;--teal:#087f8c;}
+.block-container {max-width:1180px;padding-top:2.5rem;padding-bottom:2rem;}
+[data-testid="stSidebar"] {border-right:1px solid rgba(120,140,160,.22);}
+[data-testid="stMetric"] {border:1px solid rgba(120,140,160,.25);border-radius:14px;padding:16px;}
+.stButton button,.stDownloadButton button {border-radius:10px;min-height:44px;}
+.hero {background:linear-gradient(120deg,#0c1d32,#16445a);color:white;padding:clamp(24px,5vw,58px);border-radius:22px;margin-bottom:24px;}
+.hero h1 {color:white;font-size:clamp(32px,5vw,56px);line-height:1.1;margin:12px 0;}
+.hero p {color:#d1e2ee;max-width:680px;font-size:18px;}
+.eyebrow {color:#65e1d5;font-size:12px;letter-spacing:2px;font-weight:700;}
+.footer {text-align:center;padding:28px 12px;opacity:.8;font-size:14px;}
+</style>""", unsafe_allow_html=True)
 
-st.subheader(
-    "AI-Based Prediction of Shallow Foundation Settlement"
-)
+pages = ["Home", "Settlement Predictor", "3D Foundation Studio", "Sensitivity Analysis", "Model Reliability", "Knowledge Centre", "Research Methodology", "Research Team"]
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
+def navigate(page):
+    st.session_state.page = page
+with st.sidebar:
+    st.title("GeoSettle AI")
+    st.caption("GEOTECHNICAL RESEARCH PLATFORM")
+    page = st.radio("Explore", pages, key="page")
+    st.divider()
+    st.caption("Developed by Bakr, Ghasaq & Hajar")
+    st.caption("Al-Maarif University آ· Civil Engineering")
 
-st.caption(
-    "Civil Engineering Research Platform | "
-    "Al-Maarif University"
-)
+st.caption("GEOSETTLE AI  /  " + page.upper())
+st.warning("Academic research prototype for shallow foundations on cohesionless soils. Not for professional design or construction decisions.")
 
-st.warning(
-    "Academic research prototype only. "
-    "Not intended for professional foundation design "
-    "or construction decisions."
-)
+labels = {"B_m":"Foundation width B (m)","q_kPa":"Applied pressure q (kPa)","SPT_N":"Average SPT N","L_over_B":"Length / width ratio (L/B)","Df_over_B":"Embedment ratio (Df/B)"}
+defaults = {"B_m":2.0,"q_kPa":150.0,"SPT_N":20.0,"L_over_B":1.0,"Df_over_B":0.5}
+if "foundation_values" not in st.session_state:
+    st.session_state.foundation_values = defaults.copy()
 
-# Performance dashboard
-c1, c2, c3, c4 = st.columns(4)
+def save_input(feature):
+    st.session_state.foundation_values[feature] = st.session_state["input_"+feature]
 
-c1.metric(
-    "Research Records",
-    info["total_records"]
-)
+if page in ["Settlement Predictor", "3D Foundation Studio", "Sensitivity Analysis"]:
+    st.title(page)
+    with st.expander("Foundation and soil parameters", expanded=page=="Settlement Predictor"):
+        cols=st.columns(2)
+        for i, feature in enumerate(labels):
+            with cols[i%2]:
+                st.number_input(labels[feature], min_value=1.0 if feature=="L_over_B" else (0.0 if feature=="Df_over_B" else 0.01), value=float(st.session_state.foundation_values[feature]), step=10.0 if feature=="q_kPa" else (1.0 if feature=="SPT_N" else 0.1), key="input_"+feature, on_change=save_input, args=(feature,))
+    values=st.session_state.foundation_values.copy()
+    B,q,N,LB,DfB=[values[k] for k in labels]
+    L=B*LB
+    Df=B*DfB
+    input_data=pd.DataFrame([values],columns=info["features"])
+    outside=[]
+    for feature,value in values.items():
+        limits=info["training_ranges"][feature]
+        if not limits["min"] <= value <= limits["max"]:
+            outside.append(f'{labels[feature]}: {value:.2f} (training range {limits["min"]:.2f}â€“{limits["max"]:.2f})')
+    if outside:
+        st.error("Outside training ranges: " + "; ".join(outside))
+    else:
+        st.caption("Within individual training ranges; this does not guarantee reliability.")
 
-c2.metric(
-    "Testing R²",
-    f'{info["test_r2"]:.4f}'
-)
+if page == "Home":
+    st.markdown("""<div class="hero"><div class="eyebrow">CIVIL ENGINEERING آ· RESEARCH & INNOVATION</div><h1>Understand the ground.<br>Explore settlement.</h1><p>A research platform for exploring shallow foundation settlement through machine learning, interactive geometry and geotechnical evidence.</p></div>""", unsafe_allow_html=True)
+    st.button("Explore settlement prediction â†’", type="primary", on_click=navigate, args=("Settlement Predictor",))
+    c1,c2,c3,c4=st.columns(4)
+    c1.metric("Research records",info["total_records"])
+    c2.metric("Held-out test Rآ²",f'{info["test_r2"]:.4f}')
+    c3.metric("Test MAE",f'{info["test_mae"]:.2f} mm')
+    c4.metric("Test RMSE",f'{info["test_rmse"]:.2f} mm')
+    st.subheader("Explore our engineering tools")
+    tools=[("Settlement Predictor","Estimate settlement using the trained model."),("3D Foundation Studio","Rotate and explore illustrative foundation geometry."),("Sensitivity Analysis","Investigate the effect of changing individual parameters."),("Model Reliability","Review validation results, errors and training ranges."),("Knowledge Centre","Search explanations of geotechnical concepts."),("Research Methodology","Discover the dataset, methods and limitations.")]
+    cols=st.columns(2)
+    for i,(name,description) in enumerate(tools):
+        with cols[i%2]:
+            with st.container(border=True):
+                st.subheader(name)
+                st.write(description)
+                st.button("Explore â†’",key="home_"+name,on_click=navigate,args=(name,),use_container_width=True)
+    st.caption("Rآ² is not percentage accuracy. Testing is internal to the source dataset; external generalizability remains unverified.")
 
-c3.metric(
-    "Testing MAE",
-    f'{info["test_mae"]:.2f} mm'
-)
-
-c4.metric(
-    "Testing RMSE",
-    f'{info["test_rmse"]:.2f} mm'
-)
-
-st.divider()
-
-# Navigation
-tab1, tab2, tab3 = st.tabs([
-    "Settlement Prediction",
-    "Model Performance",
-    "Research Methodology"
-])
-
-with tab1:
-
-    left, right = st.columns(2)
-
-    with left:
-
-        st.header("Foundation Parameters")
-
-        B = st.number_input(
-            "Foundation Width B (m)",
-            min_value=0.01,
-            value=2.0,
-            step=0.1
-        )
-
-        q = st.number_input(
-            "Applied Pressure q (kPa)",
-            min_value=0.01,
-            value=150.0,
-            step=10.0
-        )
-
-        N = st.number_input(
-            "Average SPT N Value",
-            min_value=0.01,
-            value=20.0,
-            step=1.0
-        )
-
-        LB = st.number_input(
-            "Length / Width Ratio (L/B)",
-            min_value=1.0,
-            value=1.0,
-            step=0.1
-        )
-
-        DfB = st.number_input(
-            "Embedment Ratio (Df/B)",
-            min_value=0.0,
-            value=0.5,
-            step=0.1
-        )
-
-        L = B * LB
-        Df = B * DfB
-
-        st.write(f"Foundation length: {L:.2f} m")
-        st.write(f"Foundation depth: {Df:.2f} m")
-
-    with right:
-
+elif page == "Settlement Predictor":
+    a,b=st.columns(2)
+    with a:
+        st.metric("Foundation length",f"{L:.2f} m")
+        st.metric("Embedment depth",f"{Df:.2f} m")
+        st.write("The model estimates measured final settlement in millimetres.")
+        if st.button("Predict Foundation Settlement",type="primary",disabled=bool(outside),use_container_width=True):
+            st.session_state.predicted_inputs=values.copy()
+    with b:
         st.header("Foundation Geometry")
 
         fig, ax = plt.subplots(figsize=(7, 5))
@@ -236,60 +215,8 @@ with tab1:
             "Footing thickness is illustrative."
         )
 
-    # Prepare model input
-    values = {
-        "B_m": B,
-        "q_kPa": q,
-        "SPT_N": N,
-        "L_over_B": LB,
-        "Df_over_B": DfB
-    }
-
-    input_data = pd.DataFrame(
-        [values],
-        columns=info["features"]
-    )
-
-    # Check training applicability ranges
-    outside = []
-
-    for feature, value in values.items():
-
-        limits = info["training_ranges"][feature]
-
-        if not limits["min"] <= value <= limits["max"]:
-            outside.append(
-                f'{feature}: {value:.2f} '
-                f'(training range: '
-                f'{limits["min"]:.2f} to '
-                f'{limits["max"]:.2f})'
-            )
-
-    if outside:
-        st.error(
-            "Inputs outside the model's training ranges:"
-        )
-        for message in outside:
-            st.write(message)
-
-    else:
-        st.info(
-            "Inputs are within individual training ranges. "
-            "This does not guarantee prediction reliability."
-        )
-
-    st.divider()
-
-    if st.button(
-        "Predict Foundation Settlement",
-        type="primary",
-        use_container_width=True,
-        disabled=bool(outside)
-    ):
-
-        prediction = float(
-            model.predict(input_data)[0]
-        )
+    if not outside and st.session_state.get("predicted_inputs")==values:
+        prediction = float(model.predict(input_data)[0])
 
         st.header("Prediction Results")
 
@@ -333,163 +260,8 @@ with tab1:
             mime="text/csv"
         )
 
-with tab2:
 
-    st.header("Model Performance and Reliability")
-
-    st.write(
-        "Selected model:", info["model_name"]
-    )
-
-    st.subheader("Experimental Data Division")
-
-    split = pd.DataFrame({
-        "Subset": [
-            "Training",
-            "Validation",
-            "Testing"
-        ],
-        "Records": [
-            info["training_records"],
-            info["validation_records"],
-            info["testing_records"]
-        ]
-    })
-
-    st.dataframe(split, hide_index=True)
-
-    st.bar_chart(
-        split.set_index("Subset")
-    )
-
-    st.subheader("Initial Validation Results")
-
-    validation = pd.DataFrame({
-        "Model": [
-            "Random Forest",
-            "Gradient Boosting",
-            "Linear Regression",
-            "Artificial Neural Network"
-        ],
-        "MAE (mm)": [
-            8.8242, 8.4343, 15.3833, 17.1762
-        ],
-        "RMSE (mm)": [
-            13.8851, 14.0786, 18.2196, 37.9771
-        ],
-        "R2": [
-            0.6859, 0.6771, 0.4592, -1.3496
-        ]
-    })
-
-    st.dataframe(
-        validation,
-        hide_index=True,
-        use_container_width=True
-    )
-
-    st.bar_chart(
-        validation.set_index("Model")["RMSE (mm)"]
-    )
-
-    st.subheader("Training Parameter Ranges")
-
-    ranges = pd.DataFrame(
-        info["training_ranges"]
-    ).T
-
-    st.dataframe(ranges)
-
-    st.info(
-        "R² is not percentage prediction accuracy. "
-        "MAE and RMSE describe aggregate testing errors, "
-        "not uncertainty bounds for individual predictions."
-    )
-
-with tab3:
-
-    st.header("Research Methodology")
-
-    st.subheader("Graduation Thesis")
-
-    st.write(
-        "Reliability and Generalizability of AI-Based "
-        "Foundation Settlement Prediction under Limited "
-        "Data and Geotechnical Variability."
-    )
-
-    st.subheader("Research Database")
-
-    st.write(
-        "The dataset contains 189 foundation settlement "
-        "records obtained from Shahin (2003), Table 5.14."
-    )
-
-    st.subheader("Machine Learning Models")
-
-    st.markdown("""
-    - Linear Regression
-    - Random Forest
-    - Gradient Boosting
-    - Artificial Neural Network
-    """)
-
-    st.write(
-        "Random Forest was selected based on the lowest "
-        "validation RMSE among the four initial models."
-    )
-
-    st.subheader("Research Limitations")
-
-    st.markdown("""
-    - Limited dataset size.
-    - Potential relationships between observations
-      from the same site.
-    - Limited representation of geotechnical variability.
-    - No independent external dataset validation.
-    - Intended for shallow foundations on cohesionless
-      soils represented by the source dataset.
-    - Not suitable as a standalone engineering design tool.
-    """)
-
-    st.subheader("Reference")
-
-    st.write(
-        "Shahin, M. A. (2003). Use of Artificial "
-        "Neural Networks for Predicting Settlement "
-        "of Shallow Foundations on Cohesionless Soils. "
-        "PhD Thesis, University of Adelaide."
-    )
-
-st.divider()
-
-st.caption(
-    "Foundation Settlement Predictor | "
-    "Civil Engineering Graduation Research | "
-    "Al-Maarif University"
-)
-
-# ==========================================
-# GEOSETTLE AI - ADVANCED ENGINEERING TOOLS
-# ==========================================
-
-import plotly.graph_objects as go
-
-st.divider()
-st.header("Advanced Engineering Analysis")
-
-advanced1, advanced2, advanced3 = st.tabs([
-    "3D Foundation Model",
-    "Sensitivity Analysis",
-    "Research Team"
-])
-
-# ------------------------------------------
-# INTERACTIVE 3D FOUNDATION MODEL
-# ------------------------------------------
-
-with advanced1:
-
+elif page == '3D Foundation Studio':
     st.subheader("Interactive Foundation Visualization")
 
     def cuboid(x, y, z, dx, dy, dz, color,
@@ -613,12 +385,8 @@ with advanced1:
         "not a calculated structural force."
     )
 
-# ------------------------------------------
-# AI SENSITIVITY ANALYSIS
-# ------------------------------------------
 
-with advanced2:
-
+elif page == 'Sensitivity Analysis':
     st.subheader("Parametric Sensitivity Analysis")
 
     st.write(
@@ -768,12 +536,136 @@ with advanced2:
             "uncertainty or confidence interval."
         )
 
-# ------------------------------------------
-# RESEARCH AND DEVELOPMENT TEAM
-# ------------------------------------------
 
-with advanced3:
+elif page == 'Model Reliability':
+    st.header("Model Performance and Reliability")
 
+    st.write(
+        "Selected model:", info["model_name"]
+    )
+
+    st.subheader("Experimental Data Division")
+
+    split = pd.DataFrame({
+        "Subset": [
+            "Training",
+            "Validation",
+            "Testing"
+        ],
+        "Records": [
+            info["training_records"],
+            info["validation_records"],
+            info["testing_records"]
+        ]
+    })
+
+    st.dataframe(split, hide_index=True)
+
+    st.bar_chart(
+        split.set_index("Subset")
+    )
+
+    st.subheader("Initial Validation Results")
+
+    validation = pd.DataFrame({
+        "Model": [
+            "Random Forest",
+            "Gradient Boosting",
+            "Linear Regression",
+            "Artificial Neural Network"
+        ],
+        "MAE (mm)": [
+            8.8242, 8.4343, 15.3833, 17.1762
+        ],
+        "RMSE (mm)": [
+            13.8851, 14.0786, 18.2196, 37.9771
+        ],
+        "R2": [
+            0.6859, 0.6771, 0.4592, -1.3496
+        ]
+    })
+
+    st.dataframe(
+        validation,
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.bar_chart(
+        validation.set_index("Model")["RMSE (mm)"]
+    )
+
+    st.subheader("Training Parameter Ranges")
+
+    ranges = pd.DataFrame(
+        info["training_ranges"]
+    ).T
+
+    st.dataframe(ranges)
+
+    st.info(
+        "Rآ² is not percentage prediction accuracy. "
+        "MAE and RMSE describe aggregate testing errors, "
+        "not uncertainty bounds for individual predictions."
+    )
+
+
+elif page == 'Research Methodology':
+    st.header("Research Methodology")
+
+    st.subheader("Graduation Thesis")
+
+    st.write(
+        "Reliability and Generalizability of AI-Based "
+        "Foundation Settlement Prediction under Limited "
+        "Data and Geotechnical Variability."
+    )
+
+    st.subheader("Research Database")
+
+    st.write(
+        "The dataset contains 189 foundation settlement "
+        "records obtained from Shahin (2003), Table 5.14."
+    )
+
+    st.subheader("Machine Learning Models")
+
+    st.markdown("""
+    - Linear Regression
+    - Random Forest
+    - Gradient Boosting
+    - Artificial Neural Network
+    """)
+
+    st.write(
+        "Random Forest was selected based on the lowest "
+        "validation RMSE among the four initial models."
+    )
+
+    st.subheader("Research Limitations")
+
+    st.markdown("""
+    - Limited dataset size.
+    - Potential relationships between observations
+      from the same site.
+    - Limited representation of geotechnical variability.
+    - No independent external dataset validation.
+    - Intended for shallow foundations on cohesionless
+      soils represented by the source dataset.
+    - Not suitable as a standalone engineering design tool.
+    """)
+
+    st.subheader("Reference")
+
+    st.write(
+        "Shahin, M. A. (2003). Use of Artificial "
+        "Neural Networks for Predicting Settlement "
+        "of Shallow Foundations on Cohesionless Soils. "
+        "PhD Thesis, University of Adelaide."
+    )
+
+
+elif page == 'Research Team':
     st.header("Research & Development Team")
 
     st.markdown("""
@@ -823,15 +715,28 @@ with advanced3:
         "prediction using limited geotechnical data."
     )
 
-st.divider()
 
-st.markdown(
-    "<div style='text-align:center;'>"
-    "<h3>GeoSettle AI</h3>"
-    "<p>Developed by Bakr, Ghasaq and Hajar</p>"
-    "<p>Department of Civil Engineering | "
-    "Al-Maarif University</p>"
-    "<p>Academic Research Project</p>"
-    "</div>",
-    unsafe_allow_html=True
-)
+elif page == "Knowledge Centre":
+    st.title("Knowledge Centre")
+    st.write("Explore foundational concepts in settlement and geotechnical engineering.")
+    articles = [
+        ("Foundation settlement", "Settlement is the downward movement of a foundation due to deformation of the supporting ground. Total and differential settlement are both important in serviceability assessment."),
+        ("Immediate settlement", "Immediate settlement arises from soil deformation under loading. It is often important in granular soils, but its magnitude depends on stiffness, stress and geometry."),
+        ("Consolidation settlement", "Consolidation involves time-dependent volume reduction as excess pore water pressure dissipates, particularly in saturated fine-grained soils. This platform is not a consolidation model."),
+        ("Differential settlement", "Unequal movement between foundation locations can cause distortion and cracking. A single settlement prediction does not determine differential settlement."),
+        ("Standard Penetration Test (SPT)", "The SPT N-value is the blow count for the final 300 mm of standard penetration after seating. Corrections and averaging depend on the investigation and method. Match the source dataset definition when using this model."),
+        ("Foundation width and embedment", "Width B and length L describe plan geometry; Df is embedment depth to the footing base. L/B and Df/B are dimensionless ratios used by this model."),
+        ("Applied foundation pressure", "For a centered vertical load with assumed uniform contact pressure, q equals load divided by contact area. Actual pressure distributions may be nonuniform. Use the pressure definition consistent with the source dataset."),
+        ("Random Forest and model reliability", "Random Forest combines predictions from multiple decision trees. Internal test metrics summarize errors on held-out observations, not guaranteed accuracy at a new site. External validation is needed."),
+        ("Conventional settlement methods", "Elastic approaches and empirical SPT or CPT correlations are used in geotechnical practice. Method selection depends on soil conditions, loading, geometry and applicable standards. This prototype does not implement these methods.")]
+    query=st.text_input("Search settlement topics",placeholder="Try SPT, consolidation, pressure...").strip().casefold()
+    matches=[(title,body) for title,body in articles if query in (title+" "+body).casefold()]
+    st.caption(f"{len(matches)} topics found")
+    for title,body in matches:
+        with st.expander(title,expanded=bool(query)):
+            st.write(body)
+    if not matches: st.info("No matching topics. Try a shorter search term.")
+    st.caption("Introductory educational explanations, not design guidance. Research dataset reference: Shahin (2003), University of Adelaide, Table 5.14.")
+
+st.divider()
+st.markdown('<div class="footer"><strong>GeoSettle AI</strong><br>Developed by Bakr, Ghasaq &amp; Hajar<br>Department of Civil Engineering آ· Al-Maarif University<br>Academic Research Project</div>',unsafe_allow_html=True)
