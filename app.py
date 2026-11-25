@@ -42,7 +42,16 @@ except Exception as e:
     st.stop()
 
 # Website heading
-st.title("🏗️ Foundation Settlement Predictor")
+st.title("GeoSettle AI")
+
+st.caption(
+    "Intelligent Foundation Settlement Prediction"
+)
+
+st.markdown(
+    "**Research & Development Team:** "
+    "Bakr | Ghasaq | Hajar"
+)
 
 st.subheader(
     "AI-Based Prediction of Shallow Foundation Settlement"
@@ -458,4 +467,371 @@ st.caption(
     "Foundation Settlement Predictor | "
     "Civil Engineering Graduation Research | "
     "Al-Maarif University"
+)
+
+# ==========================================
+# GEOSETTLE AI - ADVANCED ENGINEERING TOOLS
+# ==========================================
+
+import plotly.graph_objects as go
+
+st.divider()
+st.header("Advanced Engineering Analysis")
+
+advanced1, advanced2, advanced3 = st.tabs([
+    "3D Foundation Model",
+    "Sensitivity Analysis",
+    "Research Team"
+])
+
+# ------------------------------------------
+# INTERACTIVE 3D FOUNDATION MODEL
+# ------------------------------------------
+
+with advanced1:
+
+    st.subheader("Interactive Foundation Visualization")
+
+    def cuboid(x, y, z, dx, dy, dz, color,
+               name, opacity=1.0):
+
+        return go.Mesh3d(
+            x=[
+                x, x+dx, x+dx, x,
+                x, x+dx, x+dx, x
+            ],
+            y=[
+                y, y, y+dy, y+dy,
+                y, y, y+dy, y+dy
+            ],
+            z=[
+                z, z, z, z,
+                z+dz, z+dz, z+dz, z+dz
+            ],
+            i=[0,0,4,4,0,0,1,1,2,2,3,3],
+            j=[1,2,5,6,1,5,2,6,3,7,0,4],
+            k=[2,3,6,7,5,4,6,5,7,6,4,7],
+            color=color,
+            opacity=opacity,
+            name=name,
+            flatshading=True,
+            showlegend=True
+        )
+
+    t = B * 0.18
+    cw = B * 0.25
+
+    fig3d = go.Figure()
+
+    # Soil mass
+    fig3d.add_trace(
+        cuboid(
+            -B, -B, -Df-B,
+            3*B, L+2*B, Df+B,
+            "#C4A477", "Soil", 0.25
+        )
+    )
+
+    # Concrete footing
+    fig3d.add_trace(
+        cuboid(
+            0, 0, -Df,
+            B, L, t,
+            "#94A3B8", "Concrete footing"
+        )
+    )
+
+    # Column
+    fig3d.add_trace(
+        cuboid(
+            (B-cw)/2,
+            (L-cw)/2,
+            -Df+t,
+            cw, cw,
+            Df+B*0.6-t,
+            "#64748B", "Column"
+        )
+    )
+
+    # Applied loading direction
+    fig3d.add_trace(
+        go.Cone(
+            x=[B/2],
+            y=[L/2],
+            z=[B*1.1],
+            u=[0],
+            v=[0],
+            w=[-B*0.4],
+            anchor="tail",
+            colorscale=[
+                [0, "#EF4444"],
+                [1, "#EF4444"]
+            ],
+            showscale=False,
+            name="Loading direction"
+        )
+    )
+
+    fig3d.update_layout(
+        height=550,
+        scene=dict(
+            xaxis_title="Width (m)",
+            yaxis_title="Length (m)",
+            zaxis_title="Elevation (m)",
+            aspectmode="data"
+        ),
+        margin=dict(l=0, r=0, t=20, b=0),
+        legend=dict(
+            orientation="h"
+        )
+    )
+
+    st.plotly_chart(
+        fig3d,
+        use_container_width=True
+    )
+
+    a, b, c = st.columns(3)
+
+    a.metric("Width", f"{B:.2f} m")
+    b.metric("Length", f"{L:.2f} m")
+    c.metric("Embedment", f"{Df:.2f} m")
+
+    st.caption(
+        f"Applied pressure: {q:.2f} kPa"
+    )
+
+    st.info(
+        "Rotate the foundation using your mouse. "
+        "Scroll to zoom in and out."
+    )
+
+    st.caption(
+        "Illustrative geometry only. "
+        "Column and footing thicknesses are assumed. "
+        "The arrow indicates loading direction, "
+        "not a calculated structural force."
+    )
+
+# ------------------------------------------
+# AI SENSITIVITY ANALYSIS
+# ------------------------------------------
+
+with advanced2:
+
+    st.subheader("Parametric Sensitivity Analysis")
+
+    st.write(
+        "Investigate how changing one input "
+        "parameter affects predicted settlement "
+        "while holding the other inputs constant."
+    )
+
+    labels = {
+        "B_m": "Foundation Width (m)",
+        "q_kPa": "Applied Pressure (kPa)",
+        "SPT_N": "Average SPT N",
+        "L_over_B": "Length / Width Ratio",
+        "Df_over_B": "Embedment Ratio"
+    }
+
+    parameter = st.selectbox(
+        "Select parameter to investigate",
+        options=list(labels.keys()),
+        format_func=lambda x: labels[x]
+    )
+
+    points = st.slider(
+        "Number of analysis points",
+        min_value=20,
+        max_value=100,
+        value=50,
+        step=10
+    )
+
+    lower = info["training_ranges"][parameter]["min"]
+    upper = info["training_ranges"][parameter]["max"]
+
+    st.write(
+        f"Training range: {lower:.2f} - {upper:.2f}"
+    )
+
+    if outside:
+
+        st.error(
+            "Return all foundation inputs to their "
+            "training ranges before running analysis."
+        )
+
+    else:
+
+        parameter_values = np.linspace(
+            lower, upper, points
+        )
+
+        sensitivity_data = pd.DataFrame(
+            [values.copy() for _ in range(points)]
+        )
+
+        sensitivity_data[parameter] = parameter_values
+
+        settlements = model.predict(
+            sensitivity_data[info["features"]]
+        )
+
+        sensitivity_results = pd.DataFrame({
+            labels[parameter]: parameter_values,
+            "Predicted Settlement (mm)": settlements
+        })
+
+        fig_s = go.Figure()
+
+        fig_s.add_trace(
+            go.Scatter(
+                x=parameter_values,
+                y=settlements,
+                mode="lines+markers",
+                name="AI prediction",
+                line=dict(
+                    color="#38BDF8",
+                    width=3
+                )
+            )
+        )
+
+        baseline = float(
+            model.predict(input_data)[0]
+        )
+
+        fig_s.add_trace(
+            go.Scatter(
+                x=[values[parameter]],
+                y=[baseline],
+                mode="markers",
+                marker=dict(
+                    size=12,
+                    color="#EF4444"
+                ),
+                name="Current foundation"
+            )
+        )
+
+        fig_s.update_layout(
+            title="Influence on Predicted Settlement",
+            xaxis_title=labels[parameter],
+            yaxis_title="Predicted Settlement (mm)",
+            height=450,
+            hovermode="closest"
+        )
+
+        st.plotly_chart(
+            fig_s,
+            use_container_width=True
+        )
+
+        m1, m2, m3 = st.columns(3)
+
+        m1.metric(
+            "Minimum Prediction",
+            f"{np.min(settlements):.2f} mm"
+        )
+
+        m2.metric(
+            "Maximum Prediction",
+            f"{np.max(settlements):.2f} mm"
+        )
+
+        m3.metric(
+            "Prediction Variation",
+            f"{np.ptp(settlements):.2f} mm"
+        )
+
+        st.dataframe(
+            sensitivity_results,
+            hide_index=True
+        )
+
+        st.download_button(
+            "Download Sensitivity Analysis",
+            sensitivity_results.to_csv(index=False),
+            file_name="sensitivity_analysis.csv",
+            mime="text/csv"
+        )
+
+        st.warning(
+            "These curves represent the trained model's "
+            "behavior, not established physical laws. "
+            "Some parameter combinations may be poorly "
+            "represented in the training dataset, even "
+            "when individual inputs are within range. "
+            "The prediction variation is not an "
+            "uncertainty or confidence interval."
+        )
+
+# ------------------------------------------
+# RESEARCH AND DEVELOPMENT TEAM
+# ------------------------------------------
+
+with advanced3:
+
+    st.header("Research & Development Team")
+
+    st.markdown("""
+    ### GeoSettle AI
+
+    Intelligent Foundation Settlement Prediction
+
+    **Developed by:**
+    """)
+
+    r1, r2, r3 = st.columns(3)
+
+    with r1:
+        st.subheader("Bakr")
+        st.caption("Civil Engineering Researcher")
+
+    with r2:
+        st.subheader("Ghasaq")
+        st.caption("Civil Engineering Researcher")
+
+    with r3:
+        st.subheader("Hajar")
+        st.caption("Civil Engineering Researcher")
+
+    st.divider()
+
+    st.subheader("Academic Affiliation")
+
+    st.write("Al-Maarif University")
+    st.write("Department of Civil Engineering")
+    st.write("Graduation Research Project")
+
+    st.subheader("Research Title")
+
+    st.write(
+        "Reliability and Generalizability of AI-Based "
+        "Foundation Settlement Prediction under "
+        "Limited Data and Geotechnical Variability."
+    )
+
+    st.subheader("Research Objective")
+
+    st.write(
+        "To investigate the reliability, limitations "
+        "and generalizability of machine learning "
+        "models for shallow foundation settlement "
+        "prediction using limited geotechnical data."
+    )
+
+st.divider()
+
+st.markdown(
+    "<div style='text-align:center;'>"
+    "<h3>GeoSettle AI</h3>"
+    "<p>Developed by Bakr, Ghasaq and Hajar</p>"
+    "<p>Department of Civil Engineering | "
+    "Al-Maarif University</p>"
+    "<p>Academic Research Project</p>"
+    "</div>",
+    unsafe_allow_html=True
 )
