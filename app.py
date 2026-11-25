@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ from matplotlib.patches import Rectangle
 
 st.set_page_config(
     page_title="GeoSettle AI | Foundation Research",
-    page_icon="ًںڈ—ï¸ڈ",
+    page_icon="G",
     layout="wide"
 )
 
@@ -44,16 +45,22 @@ except Exception as e:
 import plotly.graph_objects as go
 
 st.markdown("""<style>
-:root {--navy:#0c1d32;--teal:#087f8c;}
-.block-container {max-width:1180px;padding-top:2.5rem;padding-bottom:2rem;}
-[data-testid="stSidebar"] {border-right:1px solid rgba(120,140,160,.22);}
-[data-testid="stMetric"] {border:1px solid rgba(120,140,160,.25);border-radius:14px;padding:16px;}
+:root {--navy:#102c42;--teal:#087f8c;}
+.stApp {background:#f4f7fa;color:#102c42;}
+.block-container {max-width:1280px;padding-top:4rem;padding-bottom:2rem;}
+[data-testid="stSidebar"] {background:#eaf0f5;border-right:1px solid #dce5ed;}
+[data-testid="stMetric"] {background:white;border:1px solid #dce5ed;border-radius:14px;padding:18px;}
 .stButton button,.stDownloadButton button {border-radius:10px;min-height:44px;}
-.hero {background:linear-gradient(120deg,#0c1d32,#16445a);color:white;padding:clamp(24px,5vw,58px);border-radius:22px;margin-bottom:24px;}
-.hero h1 {color:white;font-size:clamp(32px,5vw,56px);line-height:1.1;margin:12px 0;}
-.hero p {color:#d1e2ee;max-width:680px;font-size:18px;}
+[data-testid="stSidebar"] .stButton button {justify-content:flex-start;text-align:left;}
+.hero {display:flex;align-items:center;gap:24px;background:linear-gradient(120deg,#102238,#16465b);color:white;padding:clamp(24px,4vw,48px);border-radius:22px;margin:12px 0 18px;}
+.hero-copy {flex:1;min-width:0;}.hero-art {width:38%;max-width:340px;}
+.hero h1 {color:white;font-size:clamp(30px,4vw,52px);line-height:1.12;margin:14px 0;letter-spacing:-1px;}
+.hero p {color:#d1e2ee;font-size:17px;line-height:1.6;}
 .eyebrow {color:#65e1d5;font-size:12px;letter-spacing:2px;font-weight:700;}
-.footer {text-align:center;padding:28px 12px;opacity:.8;font-size:14px;}
+.brand {display:flex;align-items:center;gap:12px;margin-bottom:12px;}.brand-mark {background:#102c42;color:#5eead4;border-radius:12px;padding:10px;font-size:24px;}.brand-name {font-size:23px;font-weight:750;color:#102c42;}.brand-sub {font-size:10px;letter-spacing:1px;color:#64748b;}
+.footer {background:#102c42;color:#dce5ed;border-radius:16px;text-align:center;padding:28px 12px;font-size:14px;line-height:1.8;}
+.tool-tag {color:#087f8c;font-size:11px;font-weight:700;letter-spacing:1.5px;}
+@media(max-width:700px){.hero{flex-direction:column;align-items:flex-start}.hero-art{width:65%;align-self:center}.block-container{padding-left:1rem;padding-right:1rem;}}
 </style>""", unsafe_allow_html=True)
 
 pages = ["Home", "Settlement Predictor", "3D Foundation Studio", "Sensitivity Analysis", "Model Reliability", "Knowledge Centre", "Research Methodology", "Research Team"]
@@ -61,15 +68,17 @@ if "page" not in st.session_state:
     st.session_state.page = "Home"
 def navigate(page):
     st.session_state.page = page
+page = st.session_state.page
 with st.sidebar:
-    st.title("GeoSettle AI")
-    st.caption("GEOTECHNICAL RESEARCH PLATFORM")
-    page = st.radio("Explore", pages, key="page")
+    st.markdown('<div class="brand"><div class="brand-mark">GS</div><div><div class="brand-name">GeoSettle AI</div><div class="brand-sub">GEOTECHNICAL INTELLIGENCE</div></div></div>', unsafe_allow_html=True)
+    st.caption("ENGINEERING TOOLS | VERSION 3.1")
+    for item in pages:
+        st.button(item, key="nav_"+item, type="primary" if item==page else "secondary", use_container_width=True, on_click=navigate, args=(item,))
     st.divider()
     st.caption("Developed by Bakr, Ghasaq & Hajar")
-    st.caption("Al-Maarif University آ· Civil Engineering")
+    st.caption("Al-Maarif University | Civil Engineering")
 
-st.caption("GEOSETTLE AI  /  " + page.upper())
+st.caption("GEOSETTLE AI / " + page.upper())
 st.warning("Academic research prototype for shallow foundations on cohesionless soils. Not for professional design or construction decisions.")
 
 labels = {"B_m":"Foundation width B (m)","q_kPa":"Applied pressure q (kPa)","SPT_N":"Average SPT N","L_over_B":"Length / width ratio (L/B)","Df_over_B":"Embedment ratio (Df/B)"}
@@ -96,18 +105,18 @@ if page in ["Settlement Predictor", "3D Foundation Studio", "Sensitivity Analysi
     for feature,value in values.items():
         limits=info["training_ranges"][feature]
         if not limits["min"] <= value <= limits["max"]:
-            outside.append(f'{labels[feature]}: {value:.2f} (training range {limits["min"]:.2f}â€“{limits["max"]:.2f})')
+            outside.append(f'{labels[feature]}: {value:.2f} (training range {limits["min"]:.2f}-{limits["max"]:.2f})')
     if outside:
         st.error("Outside training ranges: " + "; ".join(outside))
     else:
         st.caption("Within individual training ranges; this does not guarantee reliability.")
 
 if page == "Home":
-    st.markdown("""<div class="hero"><div class="eyebrow">CIVIL ENGINEERING آ· RESEARCH & INNOVATION</div><h1>Understand the ground.<br>Explore settlement.</h1><p>A research platform for exploring shallow foundation settlement through machine learning, interactive geometry and geotechnical evidence.</p></div>""", unsafe_allow_html=True)
-    st.button("Explore settlement prediction â†’", type="primary", on_click=navigate, args=("Settlement Predictor",))
+    st.markdown("""<div class="hero"><div class="hero-copy"><div class="eyebrow">ENGINEERING / SCIENCE / INNOVATION</div><h1>Engineering begins beneath the surface.</h1><p>Explore foundation settlement through machine learning, geotechnical research and interactive engineering tools.</p></div><div class="hero-art"><svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustrative foundation cross section"><path d="M12 130 L135 68 L250 132 L128 197Z" fill="#a99c7c"/><path d="M12 130 L128 197 L128 250 L12 184Z" fill="#77654f"/><path d="M128 197 L250 132 L250 184 L128 250Z" fill="#927d5f"/><path d="M12 146 L128 213 L250 148 M12 162 L128 229 L250 164" fill="none" stroke="#c4ac86"/><path d="M65 132 L134 96 L196 132 L127 169Z" fill="#dce5ea"/><path d="M65 132 L127 169 L127 188 L65 151Z" fill="#8499aa"/><path d="M127 169 L196 132 L196 151 L127 188Z" fill="#a9bbc8"/><path d="M113 57 L137 44 L157 56 L133 69Z" fill="#e2e8f0"/><path d="M113 57 L133 69 L133 145 L113 133Z" fill="#8297aa"/><path d="M133 69 L157 56 L157 132 L133 145Z" fill="#b8c7d3"/><path d="M135 6 V34 M128 26 L135 36 L142 26" fill="none" stroke="#5eead4" stroke-width="3"/><text x="149" y="20" fill="#5eead4" font-size="11">q (kPa)</text></svg></div></div>""", unsafe_allow_html=True)
+    st.button("Explore settlement prediction", type="primary", on_click=navigate, args=("Settlement Predictor",))
     c1,c2,c3,c4=st.columns(4)
     c1.metric("Research records",info["total_records"])
-    c2.metric("Held-out test Rآ²",f'{info["test_r2"]:.4f}')
+    c2.metric("Held-out test R2",f'{info["test_r2"]:.4f}')
     c3.metric("Test MAE",f'{info["test_mae"]:.2f} mm')
     c4.metric("Test RMSE",f'{info["test_rmse"]:.2f} mm')
     st.subheader("Explore our engineering tools")
@@ -116,10 +125,11 @@ if page == "Home":
     for i,(name,description) in enumerate(tools):
         with cols[i%2]:
             with st.container(border=True):
+                st.markdown(f'<div class="tool-tag">ENGINEERING TOOL / {i+1:02d}</div>', unsafe_allow_html=True)
                 st.subheader(name)
                 st.write(description)
-                st.button("Explore â†’",key="home_"+name,on_click=navigate,args=(name,),use_container_width=True)
-    st.caption("Rآ² is not percentage accuracy. Testing is internal to the source dataset; external generalizability remains unverified.")
+                st.button("Explore tool",key="home_"+name,on_click=navigate,args=(name,),use_container_width=True)
+    st.caption("R2 is not percentage accuracy. Testing is internal to the source dataset; external generalizability remains unverified.")
 
 elif page == "Settlement Predictor":
     a,b=st.columns(2)
@@ -248,6 +258,8 @@ elif page == "Settlement Predictor":
             "Testing R2": info["test_r2"],
             "Testing MAE (mm)": info["test_mae"],
             "Testing RMSE (mm)": info["test_rmse"],
+            "Research team": "Bakr, Ghasaq & Hajar",
+            "Institution": "Al-Maarif University",
             "Usage": "Academic research only"
         }
 
@@ -604,7 +616,7 @@ elif page == 'Model Reliability':
     st.dataframe(ranges)
 
     st.info(
-        "Rآ² is not percentage prediction accuracy. "
+        "R2 is not percentage prediction accuracy. "
         "MAE and RMSE describe aggregate testing errors, "
         "not uncertainty bounds for individual predictions."
     )
@@ -739,4 +751,4 @@ elif page == "Knowledge Centre":
     st.caption("Introductory educational explanations, not design guidance. Research dataset reference: Shahin (2003), University of Adelaide, Table 5.14.")
 
 st.divider()
-st.markdown('<div class="footer"><strong>GeoSettle AI</strong><br>Developed by Bakr, Ghasaq &amp; Hajar<br>Department of Civil Engineering آ· Al-Maarif University<br>Academic Research Project</div>',unsafe_allow_html=True)
+st.markdown('<div class="footer"><strong>GeoSettle AI</strong><br>Developed by Bakr, Ghasaq &amp; Hajar<br>Department of Civil Engineering | Al-Maarif University<br>Academic Research Project | 2026<br>Research prototype - not for professional design decisions.</div>',unsafe_allow_html=True)
