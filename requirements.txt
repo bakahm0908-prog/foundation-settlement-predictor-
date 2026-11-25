@@ -5,3 +5,4 @@ pandas
 numpy
 joblib
 matplotlib
+plotly==6.1.2
