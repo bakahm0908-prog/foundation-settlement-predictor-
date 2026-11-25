@@ -1,5 +1,14 @@
 
 import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib
+import json
+import sklearn
+import matplotlib.pyplot as plt
+
+from pathlib import Path
+from matplotlib.patches import Rectangle
 
 st.set_page_config(
     page_title="Foundation Settlement Predictor",
@@ -7,77 +16,446 @@ st.set_page_config(
     layout="wide"
 )
 
+BASE = Path(__file__).resolve().parent
+
+# Load the trained model and research information
+@st.cache_resource
+def load_model():
+    with open(BASE / "model_info.json") as f:
+        info = json.load(f)
+
+    if sklearn.__version__ != info["sklearn_version"]:
+        raise RuntimeError(
+            "Scikit-learn version does not match "
+            "the training environment."
+        )
+
+    model = joblib.load(
+        BASE / "settlement_model.joblib"
+    )
+    return model, info
+
+try:
+    model, info = load_model()
+except Exception as e:
+    st.error(f"Model loading failed: {e}")
+    st.stop()
+
+# Website heading
 st.title("🏗️ Foundation Settlement Predictor")
 
 st.subheader(
     "AI-Based Prediction of Shallow Foundation Settlement"
 )
 
-st.markdown("""
-Welcome to our academic geotechnical engineering platform.
+st.caption(
+    "Civil Engineering Research Platform | "
+    "Al-Maarif University"
+)
 
-This platform aims to predict foundation settlement using
-machine learning and verified experimental data.
-""")
+st.warning(
+    "Academic research prototype only. "
+    "Not intended for professional foundation design "
+    "or construction decisions."
+)
 
-st.divider()
+# Performance dashboard
+c1, c2, c3, c4 = st.columns(4)
 
-st.header("Foundation and Soil Parameters")
+c1.metric(
+    "Research Records",
+    info["total_records"]
+)
 
-col1, col2 = st.columns(2)
+c2.metric(
+    "Testing R²",
+    f'{info["test_r2"]:.4f}'
+)
 
-with col1:
-    B = st.number_input(
-        "Foundation Width B (m)",
-        min_value=0.01,
-        value=2.0
-    )
+c3.metric(
+    "Testing MAE",
+    f'{info["test_mae"]:.2f} mm'
+)
 
-    q = st.number_input(
-        "Applied Pressure q (kPa)",
-        min_value=0.01,
-        value=150.0
-    )
-
-    N = st.number_input(
-        "Average SPT N Value",
-        min_value=0.0,
-        value=20.0
-    )
-
-with col2:
-    LB = st.number_input(
-        "Length / Width Ratio (L/B)",
-        min_value=0.01,
-        value=1.0
-    )
-
-    DfB = st.number_input(
-        "Embedment Ratio (Df/B)",
-        min_value=0.0,
-        value=0.5
-    )
+c4.metric(
+    "Testing RMSE",
+    f'{info["test_rmse"]:.2f} mm'
+)
 
 st.divider()
 
-if st.button("Predict Settlement", use_container_width=True):
-    st.warning(
-        "The prediction model is currently under development. "
-        "No prediction will be generated until the trained model "
-        "has been scientifically evaluated."
+# Navigation
+tab1, tab2, tab3 = st.tabs([
+    "Settlement Prediction",
+    "Model Performance",
+    "Research Methodology"
+])
+
+with tab1:
+
+    left, right = st.columns(2)
+
+    with left:
+
+        st.header("Foundation Parameters")
+
+        B = st.number_input(
+            "Foundation Width B (m)",
+            min_value=0.01,
+            value=2.0,
+            step=0.1
+        )
+
+        q = st.number_input(
+            "Applied Pressure q (kPa)",
+            min_value=0.01,
+            value=150.0,
+            step=10.0
+        )
+
+        N = st.number_input(
+            "Average SPT N Value",
+            min_value=0.01,
+            value=20.0,
+            step=1.0
+        )
+
+        LB = st.number_input(
+            "Length / Width Ratio (L/B)",
+            min_value=1.0,
+            value=1.0,
+            step=0.1
+        )
+
+        DfB = st.number_input(
+            "Embedment Ratio (Df/B)",
+            min_value=0.0,
+            value=0.5,
+            step=0.1
+        )
+
+        L = B * LB
+        Df = B * DfB
+
+        st.write(f"Foundation length: {L:.2f} m")
+        st.write(f"Foundation depth: {Df:.2f} m")
+
+    with right:
+
+        st.header("Foundation Geometry")
+
+        fig, ax = plt.subplots(figsize=(7, 5))
+
+        thickness = B * 0.18
+        column_width = B * 0.25
+
+        ax.add_patch(Rectangle(
+            (-B, -Df - B),
+            3 * B,
+            Df + B,
+            facecolor="#D2B48C",
+            alpha=0.55,
+            hatch=".."
+        ))
+
+        ax.axhline(
+            0, color="saddlebrown", linewidth=2
+        )
+
+        ax.add_patch(Rectangle(
+            (0, -Df),
+            B,
+            thickness,
+            facecolor="gray",
+            edgecolor="black"
+        ))
+
+        ax.add_patch(Rectangle(
+            ((B-column_width)/2, -Df+thickness),
+            column_width,
+            Df+B*0.5-thickness,
+            facecolor="gray",
+            edgecolor="black"
+        ))
+
+        ax.annotate(
+            "",
+            xy=(B/2, B*0.52),
+            xytext=(B/2, B*0.95),
+            arrowprops=dict(
+                arrowstyle="->",
+                color="red",
+                lw=2
+            )
+        )
+
+        ax.text(
+            B/2, B*1.05,
+            f"q = {q:.1f} kPa",
+            ha="center",
+            color="red"
+        )
+
+        ax.annotate(
+            "",
+            xy=(0, -Df-B*0.25),
+            xytext=(B, -Df-B*0.25),
+            arrowprops=dict(arrowstyle="<->")
+        )
+
+        ax.text(
+            B/2, -Df-B*0.4,
+            f"B = {B:.2f} m",
+            ha="center"
+        )
+
+        ax.text(
+            B*1.15, -Df/2,
+            f"Df = {Df:.2f} m"
+        )
+
+        ax.set_xlim(-B*0.8, B*2)
+        ax.set_ylim(-Df-B*0.8, B*1.3)
+        ax.set_aspect("equal")
+        ax.axis("off")
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+        st.caption(
+            "Schematic cross-section. "
+            "Footing thickness is illustrative."
+        )
+
+    # Prepare model input
+    values = {
+        "B_m": B,
+        "q_kPa": q,
+        "SPT_N": N,
+        "L_over_B": LB,
+        "Df_over_B": DfB
+    }
+
+    input_data = pd.DataFrame(
+        [values],
+        columns=info["features"]
+    )
+
+    # Check training applicability ranges
+    outside = []
+
+    for feature, value in values.items():
+
+        limits = info["training_ranges"][feature]
+
+        if not limits["min"] <= value <= limits["max"]:
+            outside.append(
+                f'{feature}: {value:.2f} '
+                f'(training range: '
+                f'{limits["min"]:.2f} to '
+                f'{limits["max"]:.2f})'
+            )
+
+    if outside:
+        st.error(
+            "Inputs outside the model's training ranges:"
+        )
+        for message in outside:
+            st.write(message)
+
+    else:
+        st.info(
+            "Inputs are within individual training ranges. "
+            "This does not guarantee prediction reliability."
+        )
+
+    st.divider()
+
+    if st.button(
+        "Predict Foundation Settlement",
+        type="primary",
+        use_container_width=True,
+        disabled=bool(outside)
+    ):
+
+        prediction = float(
+            model.predict(input_data)[0]
+        )
+
+        st.header("Prediction Results")
+
+        st.metric(
+            "Predicted Settlement",
+            f"{prediction:.2f} mm"
+        )
+
+        st.write(
+            f"Prediction model: {info['model_name']}"
+        )
+
+        st.warning(
+            "This is a statistical estimate, not a "
+            "guaranteed settlement value. The model may "
+            "substantially underestimate large settlements."
+        )
+
+        report = {
+            "Foundation width (m)": B,
+            "Foundation length (m)": L,
+            "Foundation depth (m)": Df,
+            "Applied pressure (kPa)": q,
+            "Average SPT N": N,
+            "L/B": LB,
+            "Df/B": DfB,
+            "Predicted settlement (mm)": prediction,
+            "Model": info["model_name"],
+            "Testing R2": info["test_r2"],
+            "Testing MAE (mm)": info["test_mae"],
+            "Testing RMSE (mm)": info["test_rmse"],
+            "Usage": "Academic research only"
+        }
+
+        report_df = pd.DataFrame([report])
+
+        st.download_button(
+            "Download Prediction Report (CSV)",
+            data=report_df.to_csv(index=False),
+            file_name="settlement_prediction.csv",
+            mime="text/csv"
+        )
+
+with tab2:
+
+    st.header("Model Performance and Reliability")
+
+    st.write(
+        "Selected model:", info["model_name"]
+    )
+
+    st.subheader("Experimental Data Division")
+
+    split = pd.DataFrame({
+        "Subset": [
+            "Training",
+            "Validation",
+            "Testing"
+        ],
+        "Records": [
+            info["training_records"],
+            info["validation_records"],
+            info["testing_records"]
+        ]
+    })
+
+    st.dataframe(split, hide_index=True)
+
+    st.bar_chart(
+        split.set_index("Subset")
+    )
+
+    st.subheader("Initial Validation Results")
+
+    validation = pd.DataFrame({
+        "Model": [
+            "Random Forest",
+            "Gradient Boosting",
+            "Linear Regression",
+            "Artificial Neural Network"
+        ],
+        "MAE (mm)": [
+            8.8242, 8.4343, 15.3833, 17.1762
+        ],
+        "RMSE (mm)": [
+            13.8851, 14.0786, 18.2196, 37.9771
+        ],
+        "R2": [
+            0.6859, 0.6771, 0.4592, -1.3496
+        ]
+    })
+
+    st.dataframe(
+        validation,
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.bar_chart(
+        validation.set_index("Model")["RMSE (mm)"]
+    )
+
+    st.subheader("Training Parameter Ranges")
+
+    ranges = pd.DataFrame(
+        info["training_ranges"]
+    ).T
+
+    st.dataframe(ranges)
+
+    st.info(
+        "R² is not percentage prediction accuracy. "
+        "MAE and RMSE describe aggregate testing errors, "
+        "not uncertainty bounds for individual predictions."
+    )
+
+with tab3:
+
+    st.header("Research Methodology")
+
+    st.subheader("Graduation Thesis")
+
+    st.write(
+        "Reliability and Generalizability of AI-Based "
+        "Foundation Settlement Prediction under Limited "
+        "Data and Geotechnical Variability."
+    )
+
+    st.subheader("Research Database")
+
+    st.write(
+        "The dataset contains 189 foundation settlement "
+        "records obtained from Shahin (2003), Table 5.14."
+    )
+
+    st.subheader("Machine Learning Models")
+
+    st.markdown("""
+    - Linear Regression
+    - Random Forest
+    - Gradient Boosting
+    - Artificial Neural Network
+    """)
+
+    st.write(
+        "Random Forest was selected based on the lowest "
+        "validation RMSE among the four initial models."
+    )
+
+    st.subheader("Research Limitations")
+
+    st.markdown("""
+    - Limited dataset size.
+    - Potential relationships between observations
+      from the same site.
+    - Limited representation of geotechnical variability.
+    - No independent external dataset validation.
+    - Intended for shallow foundations on cohesionless
+      soils represented by the source dataset.
+    - Not suitable as a standalone engineering design tool.
+    """)
+
+    st.subheader("Reference")
+
+    st.write(
+        "Shahin, M. A. (2003). Use of Artificial "
+        "Neural Networks for Predicting Settlement "
+        "of Shallow Foundations on Cohesionless Soils. "
+        "PhD Thesis, University of Adelaide."
     )
 
 st.divider()
-
-st.subheader("Research Background")
-
-st.write("""
-The initial research model is based on the work of
-Mohamed A. Shahin (2003), concerning settlement prediction
-of shallow foundations on cohesionless soils using
-artificial neural networks.
-""")
 
 st.caption(
-    "Academic research prototype | Model development in progress"
+    "Foundation Settlement Predictor | "
+    "Civil Engineering Graduation Research | "
+    "Al-Maarif University"
 )
