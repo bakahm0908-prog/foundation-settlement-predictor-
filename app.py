@@ -47,8 +47,13 @@ def build_pdf(report, info, fig):
     picture.drawHeight = picture.imageHeight*scale
     story.extend([picture,p('Illustrative cross-section; not a construction drawing.','SmallNote'),p('03 / Prediction results','Section')])
     story.append(p(f'<font color="#087F8C" size="19"><b>{report["Predicted settlement (mm)"]:.2f} mm</b></font>','Heading2'))
-    story.append(p('Model: '+escape(str(info['model_name']))+' | Prediction interval: not yet calibrated.','SmallNote'))
-    story.append(p('04 / Internal held-out test performance','Section'))
+    story.append(p('Model: '+escape(str(info['model_name']))+' | Baseline prediction','SmallNote'))
+    if "Uncertainty prediction (mm)" in report:
+        story.append(p(f'Experimental model: {report["Uncertainty prediction (mm)"]:.2f} mm | {report["Target coverage (%)"]:.0f}% target interval: {report["Lower bound (mm)"]:.2f} to {report["Upper bound (mm)"]:.2f} mm','SmallNote'))
+        story.append(p(f'Observed internal coverage: {report["Observed coverage (%)"]:.2f}% (29 test records). Separate model: 93 training, 39 calibration. Coverage assumes exchangeability; not a site-specific guarantee.','SmallNote'))
+    else:
+        story.append(p('Experimental prediction interval unavailable for these inputs.','SmallNote'))
+    story.append(p('04 / Baseline internal held-out test performance','Section'))
     story.append(table([['R2','MAE (mm)','RMSE (mm)'],[f'{info["test_r2"]:.4f}',f'{info["test_mae"]:.2f}',f'{info["test_rmse"]:.2f}']],[165,165,165]))
     story.extend([Spacer(1,6),p('Academic research only. Inputs are within individual training ranges; this does not establish site suitability. Large settlements may be underestimated. Independent external validation is not established. Not for design or construction decisions.','SmallNote'),Spacer(1,5),p('Data source: Shahin, M. A. (2003). Use of Artificial Neural Networks for Predicting Settlement of Shallow Foundations on Cohesionless Soils. PhD thesis, University of Adelaide, Table 5.14.','SmallNote')])
     def footer(c, doc):
@@ -93,6 +98,19 @@ except Exception as e:
     st.stop()
 
 
+@st.cache_resource
+def load_uncertainty():
+    with open(BASE / "uncertainty_info.json") as f:
+        meta = json.load(f)
+    if sklearn.__version__ != meta["sklearn_version"]:
+        raise RuntimeError("Uncertainty model version mismatch.")
+    return joblib.load(BASE / "uncertainty_model.joblib"), meta
+
+try:
+    uncertainty_model, uncertainty_info = load_uncertainty()
+except Exception:
+    uncertainty_model, uncertainty_info = None, None
+
 import plotly.graph_objects as go
 
 st.markdown("""<style>
@@ -122,7 +140,7 @@ def navigate(page):
 page = st.session_state.page
 with st.sidebar:
     st.markdown('<div class="brand"><div class="brand-mark">GS</div><div><div class="brand-name">GeoSettle AI</div><div class="brand-sub">GEOTECHNICAL INTELLIGENCE</div></div></div>', unsafe_allow_html=True)
-    st.caption("ENGINEERING TOOLS | VERSION 3.3")
+    st.caption("ENGINEERING TOOLS | VERSION 4.0")
     for item in pages:
         st.button(item, key="nav_"+item, type="primary" if item==page else "secondary", use_container_width=True, on_click=navigate, args=(item,))
     st.divider()
@@ -315,6 +333,27 @@ elif page == "Settlement Predictor":
             "Usage": "Academic research only"
         }
 
+        st.subheader("Scientific prediction uncertainty")
+        if uncertainty_model is None:
+            st.info("Experimental uncertainty model is not available.")
+        elif any(not uncertainty_info["training_ranges"][f]["min"] <= float(input_data[f].iloc[0]) <= uncertainty_info["training_ranges"][f]["max"] for f in uncertainty_info["features"]):
+            st.warning("Inputs outside the experimental model training ranges. Interval not reported.")
+        else:
+            level = st.selectbox("Target coverage", [80, 90, 95], index=1, format_func=lambda x: f"{x}%")
+            estimate = float(uncertainty_model.predict(input_data[uncertainty_info["features"]])[0])
+            margin = uncertainty_info["uncertainty_margins"][str(level)]
+            lo, hi = max(0, estimate-margin), estimate+margin
+            result = next(r for r in uncertainty_info["coverage_results"] if r["Target coverage (%)"] == level)
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Experimental prediction", f"{estimate:.2f} mm")
+            c2.metric("Prediction interval", f"{lo:.2f} - {hi:.2f} mm")
+            c3.metric("Observed test coverage", f'{result["Observed coverage (%)"]:.2f}%')
+            interval_fig = go.Figure(go.Scatter(x=[estimate], y=["Experimental model"], mode="markers", marker=dict(size=12,color="#087f8c"), error_x=dict(type="data", symmetric=False, array=[hi-estimate], arrayminus=[estimate-lo], color="#087f8c", thickness=3)))
+            interval_fig.update_layout(height=180, xaxis_title="Settlement (mm)", xaxis=dict(range=[0,max(hi*1.1,1)]), margin=dict(l=10,r=20,t=10,b=40))
+            st.plotly_chart(interval_fig, use_container_width=True)
+            st.caption(f'{result["Covered records"]} of 29 test records captured. Separate Random Forest trained on 93 records and calibrated on 39. Baseline prediction above is unchanged.')
+            st.warning("Exploratory internal analysis. Coverage depends on exchangeability and is not guaranteed for new sites or individual foundations. Not for design or construction decisions.")
+            report.update({"Uncertainty prediction (mm)": estimate, "Target coverage (%)": level, "Lower bound (mm)": lo, "Upper bound (mm)": hi, "Observed coverage (%)": result["Observed coverage (%)"]})
         report_df = pd.DataFrame([report])
         try:
             pdf_data = build_pdf(report, info, fig)
@@ -609,6 +648,15 @@ elif page == 'Sensitivity Analysis':
 
 elif page == 'Model Reliability':
     st.header("Model Performance and Reliability")
+    if uncertainty_info is not None:
+        st.subheader("Experimental conformal prediction")
+        comparison = pd.DataFrame([{"Model": "Baseline", "Training records": info["training_records"], "R2": info["test_r2"], "MAE (mm)": info["test_mae"], "RMSE (mm)": info["test_rmse"]}, {"Model": "Uncertainty model", "Training records": uncertainty_info["training_records"], "R2": uncertainty_info["test_r2"], "MAE (mm)": uncertainty_info["test_mae"], "RMSE (mm)": uncertainty_info["test_rmse"]}])
+        st.dataframe(comparison.round(4), hide_index=True)
+        coverage_table = pd.DataFrame(uncertainty_info["coverage_results"])
+        st.dataframe(coverage_table.round(2), hide_index=True)
+        st.bar_chart(coverage_table.set_index("Target coverage (%)")[["Observed coverage (%)"]].assign(Target=coverage_table["Target coverage (%)"].to_numpy()))
+        st.caption("93 training, 39 calibration, 28 reserved validation and 29 test records. The test split was previously evaluated; these results are exploratory, not independent external validation. The 90% target was not reached on this test split. Wider intervals trade precision for coverage.")
+    st.subheader("Baseline model")
 
     st.write(
         "Selected model:", info["model_name"]
