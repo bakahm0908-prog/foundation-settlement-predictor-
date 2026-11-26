@@ -1,0 +1,75 @@
+{
+    "model_name": "Random Forest",
+    "method": "Split Conformal Prediction",
+    "total_records": 189,
+    "training_records": 93,
+    "calibration_records": 39,
+    "validation_records": 28,
+    "testing_records": 29,
+    "test_mae": 7.9012684729064055,
+    "test_rmse": 13.054288126594662,
+    "test_r2": 0.7881906128117866,
+    "features": [
+        "B_m",
+        "q_kPa",
+        "SPT_N",
+        "L_over_B",
+        "Df_over_B"
+    ],
+    "sklearn_version": "1.6.1",
+    "uncertainty_margins": {
+        "80": 11.792944444444439,
+        "90": 17.966666666666665,
+        "95": 40.08994444444444
+    },
+    "coverage_results": [
+        {
+            "Target coverage (%)": 80.0,
+            "Observed coverage (%)": 82.75862068965517,
+            "Covered records": 24,
+            "Total records": 29,
+            "Margin (mm)": 11.792944444444439,
+            "Mean interval width (mm)": 21.471467816091952
+        },
+        {
+            "Target coverage (%)": 90.0,
+            "Observed coverage (%)": 86.20689655172413,
+            "Covered records": 25,
+            "Total records": 29,
+            "Margin (mm)": 17.966666666666665,
+            "Mean interval width (mm)": 29.727975095785435
+        },
+        {
+            "Target coverage (%)": 95.0,
+            "Observed coverage (%)": 96.55172413793103,
+            "Covered records": 28,
+            "Total records": 29,
+            "Margin (mm)": 40.08994444444444,
+            "Mean interval width (mm)": 55.0642164750958
+        }
+    ],
+    "training_ranges": {
+        "B_m": {
+            "min": 0.8,
+            "max": 60.0
+        },
+        "q_kPa": {
+            "min": 18.32,
+            "max": 697.0
+        },
+        "SPT_N": {
+            "min": 4.0,
+            "max": 53.0
+        },
+        "L_over_B": {
+            "min": 1.0,
+            "max": 10.6
+        },
+        "Df_over_B": {
+            "min": 0.0,
+            "max": 3.44
+        }
+    },
+    "external_validation": false,
+    "limitations": "Exploratory internal reliability analysis. Limited calibration and testing data. Coverage depends on exchangeability. Not intended for construction decisions."
+}
