@@ -6,3 +6,4 @@ numpy
 joblib
 matplotlib
 plotly==6.1.2
+reportlab==4.4.4
