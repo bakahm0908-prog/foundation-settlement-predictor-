@@ -10,6 +10,57 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from matplotlib.patches import Rectangle
 
+def build_pdf(report, info, fig):
+    from io import BytesIO
+    from datetime import datetime, timezone
+    from uuid import uuid4
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from xml.sax.saxutils import escape
+    buffer = BytesIO()
+    navy = colors.HexColor('#102C42')
+    teal = colors.HexColor('#087F8C')
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Brand', fontName='Helvetica-Bold', fontSize=23, leading=27, textColor=navy))
+    styles.add(ParagraphStyle(name='Section', fontName='Helvetica-Bold', fontSize=11, leading=15, textColor=teal, spaceBefore=9, spaceAfter=5))
+    styles.add(ParagraphStyle(name='SmallNote', fontSize=8, leading=11, textColor=colors.HexColor('#475569')))
+    def p(text, style='Normal'):
+        return Paragraph(text, styles[style])
+    def table(rows, widths):
+        t = Table(rows, colWidths=widths)
+        t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#F1F5F9')),('ROWBACKGROUNDS',(0,0),(-1,-1),[colors.HexColor('#F1F5F9'),colors.white]),('TEXTCOLOR',(0,0),(-1,-1),navy),('FONTNAME',(0,0),(-1,-1),'Helvetica'),('FONTSIZE',(0,0),(-1,-1),9),('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5)]))
+        return t
+    rid = 'GS-' + uuid4().hex[:10].upper()
+    date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+    story = [p('GeoSettle AI','Brand'), p('GEOTECHNICAL INTELLIGENCE | AL-MAARIF UNIVERSITY','SmallNote'), Spacer(1,9), p('<b>Foundation Settlement Analysis Report</b>','Heading2'), p(f'{rid} | Generated {date}','SmallNote'), p('01 / Foundation parameters','Section')]
+    keys = list(report)[:7]
+    story.append(table([[k, f'{float(report[k]):.2f}'] for k in keys],[325,170]))
+    story.append(p('02 / Foundation geometry','Section'))
+    img = BytesIO()
+    fig.savefig(img, format='png', dpi=150, bbox_inches='tight', pad_inches=0.05)
+    img.seek(0)
+    picture = Image(img)
+    scale = min(495/picture.imageWidth, 145/picture.imageHeight)
+    picture.drawWidth = picture.imageWidth*scale
+    picture.drawHeight = picture.imageHeight*scale
+    story.extend([picture,p('Illustrative cross-section; not a construction drawing.','SmallNote'),p('03 / Prediction results','Section')])
+    story.append(p(f'<font color="#087F8C" size="19"><b>{report["Predicted settlement (mm)"]:.2f} mm</b></font>','Heading2'))
+    story.append(p('Model: '+escape(str(info['model_name']))+' | Prediction interval: not yet calibrated.','SmallNote'))
+    story.append(p('04 / Internal held-out test performance','Section'))
+    story.append(table([['R2','MAE (mm)','RMSE (mm)'],[f'{info["test_r2"]:.4f}',f'{info["test_mae"]:.2f}',f'{info["test_rmse"]:.2f}']],[165,165,165]))
+    story.extend([Spacer(1,6),p('Academic research only. Inputs are within individual training ranges; this does not establish site suitability. Large settlements may be underestimated. Independent external validation is not established. Not for design or construction decisions.','SmallNote'),Spacer(1,5),p('Data source: Shahin, M. A. (2003). Use of Artificial Neural Networks for Predicting Settlement of Shallow Foundations on Cohesionless Soils. PhD thesis, University of Adelaide, Table 5.14.','SmallNote')])
+    def footer(c, doc):
+        c.setStrokeColor(teal); c.line(50,55,545,55)
+        c.setFont('Helvetica-Bold',8); c.setFillColor(navy)
+        c.drawCentredString(297.5,43,'Developed by Bakr, Ghasaq & Hajar | Al-Maarif University')
+        c.setFont('Helvetica',8); c.drawCentredString(297.5,31,'Supervised by Assistant Lecturer Soura Saeed | Civil Engineering')
+        c.drawRightString(545,18,str(doc.page))
+    SimpleDocTemplate(buffer,pagesize=A4,rightMargin=50,leftMargin=50,topMargin=35,bottomMargin=68,title='GeoSettle AI - Settlement Report').build(story,onFirstPage=footer,onLaterPages=footer)
+    return buffer.getvalue()
+
+
 st.set_page_config(
     page_title="GeoSettle AI | Foundation Research",
     page_icon="G",
@@ -71,7 +122,7 @@ def navigate(page):
 page = st.session_state.page
 with st.sidebar:
     st.markdown('<div class="brand"><div class="brand-mark">GS</div><div><div class="brand-name">GeoSettle AI</div><div class="brand-sub">GEOTECHNICAL INTELLIGENCE</div></div></div>', unsafe_allow_html=True)
-    st.caption("ENGINEERING TOOLS | VERSION 3.2")
+    st.caption("ENGINEERING TOOLS | VERSION 3.3")
     for item in pages:
         st.button(item, key="nav_"+item, type="primary" if item==page else "secondary", use_container_width=True, on_click=navigate, args=(item,))
     st.divider()
@@ -265,6 +316,12 @@ elif page == "Settlement Predictor":
         }
 
         report_df = pd.DataFrame([report])
+        try:
+            pdf_data = build_pdf(report, info, fig)
+            st.download_button("Download Professional Report (PDF)", data=pdf_data,
+                               file_name="GeoSettle_Settlement_Report.pdf", mime="application/pdf")
+        except ImportError:
+            st.info("PDF export requires reportlab in requirements.txt.")
 
         st.download_button(
             "Download Prediction Report (CSV)",
